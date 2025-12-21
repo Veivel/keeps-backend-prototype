@@ -3,3 +3,10 @@ pydantic-settings
 uvicorn
 python-dotenv
 httpx
+
+sqlmodel
+fastapi-sso
+python-jose[cryptography]
+python-multipart
+wtforms
+pytest
