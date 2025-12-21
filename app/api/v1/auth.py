@@ -10,6 +10,7 @@ from app.api import deps
 from app.core import config
 from app.core.config import settings
 from app.models.user import User
+from app.schemas.token import Token
 
 router = APIRouter()
 
@@ -28,7 +29,7 @@ except Exception as e:
     google_sso = None
 
 
-@router.get("/login/google")
+@router.get("/login/google", response_class=RedirectResponse)
 async def google_login():
     """Generate login URL and redirect"""
     if not google_sso:
@@ -41,7 +42,7 @@ async def google_login():
     # NOTE: Hardcoded localhost:8000 for dev simplicity. In prod, use request.base_url or configured domain.
 
 
-@router.get("/callback/google")
+@router.get("/callback/google", response_model=Token)
 async def google_callback(request: Request, session: deps.SessionDep):
     """Process login response from Google and return JWT"""
     if not google_sso:

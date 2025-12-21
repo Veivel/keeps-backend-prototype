@@ -8,6 +8,8 @@ from sqlmodel import select
 
 from app.api import deps
 from app.models.user import User
+from app.schemas.pairing import PairingCodeResponse, PairingResponse
+from app.schemas.msg import Msg
 
 router = APIRouter()
 
@@ -17,7 +19,7 @@ def generate_code(length=6):
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 
-@router.post("/code")
+@router.post("/code", response_model=PairingCodeResponse)
 def generate_pairing_code(
     session: deps.SessionDep,
     current_user: deps.CurrentUser,
@@ -40,7 +42,7 @@ def generate_pairing_code(
     return {"pairing_code": current_user.pairing_code}
 
 
-@router.post("/pair")
+@router.post("/pair", response_model=PairingResponse)
 def pair_users(
     session: deps.SessionDep,
     current_user: deps.CurrentUser,
@@ -87,7 +89,7 @@ def pair_users(
     }
 
 
-@router.post("/unpair")
+@router.post("/unpair", response_model=Msg)
 def unpair_users(
     session: deps.SessionDep,
     current_user: deps.CurrentUser,
