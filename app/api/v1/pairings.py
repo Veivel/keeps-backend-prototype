@@ -25,7 +25,8 @@ def generate_pairing_code(
     current_user: deps.CurrentUser,
 ) -> Any:
     """
-    Generate a pairing code for the current user.
+    Generate a pairing code for the current user,
+    then saves it to DB before returning the code.
     """
     if current_user.partner_id:
         raise HTTPException(status_code=400, detail="User is already paired")
