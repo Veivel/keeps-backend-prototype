@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: keeps-backend-prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME:-Keeps Backend}
+      - API_V1_STR=${API_V1_STR:-/api/v1}
+      - SECRET_KEY=${SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-["http://localhost:3000"]}
+    volumes:
+      # Persist SQLite database
+      - ./data:/app/data
+    env_file:
+      - .env
+    networks:
+      - keeps-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+networks:
+  keeps-network:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local

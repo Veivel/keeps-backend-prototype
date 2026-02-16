@@ -10,3 +10,7 @@ api_router.include_router(pairings.router, prefix="/pairings", tags=["pairings"]
 @api_router.get("/")
 def root():
     return {"message": "Hello World"}
+
+@api_router.get("/health")
+def health_check():
+    return {"status": "healthy"}
