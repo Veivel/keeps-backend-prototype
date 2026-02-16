@@ -1,5 +1,7 @@
 from typing import Any
+import datetime
 
+import httpx
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi_sso.sso.google import GoogleSSO
@@ -10,7 +12,7 @@ from app.api import deps
 from app.core import config
 from app.core.config import settings
 from app.models.user import User
-from app.schemas.token import Token
+from app.schemas.token import Token, GoogleAccessToken
 
 router = APIRouter()
 
@@ -77,12 +79,80 @@ async def google_callback(request: Request, session: deps.SessionDep):
     # Simplicity: inline or simple utility.
     
     # We'll stick to a simple inline JWT creation here for the scaffold.
-    import datetime
     expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = token_data.copy()
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
 
+    return {
+        "access_token": encoded_jwt,
+        "token_type": "bearer",
+        "user": user
+    }
+
+
+@router.get("/profile", response_model=User)
+def get_profile(current_user: deps.CurrentUser) -> User:
+    """Get the current authenticated user's profile"""
+    return current_user
+
+
+@router.post("/login/google/token", response_model=Token)
+async def google_token_login(
+    token_data: GoogleAccessToken,
+    session: deps.SessionDep
+):
+    """Verify Google OAuth2 access token and login/register user"""
+    
+    # Verify the access token with Google
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?access_token={token_data.access_token}"
+            )
+            response.raise_for_status()
+            google_user_info = response.json()
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid Google access token: {str(e)}"
+            )
+    
+    # Extract user information from Google's response
+    email = google_user_info.get("email")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No email found in Google token"
+        )
+    
+    # Optional: Verify the token is for your app's client_id
+    # if google_user_info.get("aud") != settings.GOOGLE_CLIENT_ID:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Token not issued for this application"
+    #     )
+    
+    # Check if user exists
+    user = session.exec(select(User).where(User.email == email)).first()
+    if not user:
+        # Create new user
+        user = User(
+            email=email,
+            full_name=google_user_info.get("name"),
+            picture=google_user_info.get("picture")
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    
+    # Create JWT token for the app
+    expire = datetime.datetime.utcnow() + datetime.timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    to_encode = {"sub": str(user.id), "exp": expire}
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
+    
     return {
         "access_token": encoded_jwt,
         "token_type": "bearer",

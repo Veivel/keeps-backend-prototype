@@ -5,3 +5,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+
+
+class GoogleAccessToken(BaseModel):
+    access_token: str

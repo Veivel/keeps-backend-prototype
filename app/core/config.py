@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    BACKEND_CORS_ORIGINS: Union[List[AnyHttpUrl], str] = []
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = []
 
     # Database
     SQLALCHEMY_DATABASE_URI: str = "sqlite:///test.db"
