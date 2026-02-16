@@ -28,10 +28,6 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY ./app ./app
 
-# Create a non-root user (optional but recommended for security)
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
-
 # Expose port
 EXPOSE 8000
 
